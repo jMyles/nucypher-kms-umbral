@@ -120,10 +120,11 @@ class CorrectnessProof(object):
         v2 = Point.from_bytes(data.read(point_size), curve)
         kfrag_commitment = Point.from_bytes(data.read(point_size), curve)
         kfrag_pok = Point.from_bytes(data.read(point_size), curve)
+        bn_sig = CurveBN.from_bytes(data.read(bn_size), curve)
         kfrag_signature = Signature.from_bytes(data.read(Signature.get_size()))
         metadata = data.read() or None
 
-        return cls(e2, v2, kfrag_commitment, kfrag_pok,
+        return cls(e2, v2, kfrag_commitment, kfrag_pok, bn_sig=bn_sig,
                    metadata=metadata, kfrag_signature=kfrag_signature)
 
     def to_bytes(self) -> bytes:
@@ -139,7 +140,8 @@ class CorrectnessProof(object):
                  + v2 \
                  + kfrag_commitment \
                  + kfrag_pok \
-                 + self._kfrag_signature
+                 + self.bn_sig.to_bytes() \
+                 + self.kfrag_signature
 
         result += self.metadata or b''
 

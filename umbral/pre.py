@@ -19,7 +19,6 @@ from io import BytesIO
 
 import os
 
-
 CHACHA20_KEY_SIZE = 32
 
 
@@ -93,7 +92,7 @@ class Capsule(object):
             e_prime = v_prime = ni = None
 
         return cls(point_e=e, point_v=v, bn_sig=sig,
-                   point_e_prime=e_prime, point_v_prime=v_prime, 
+                   point_e_prime=e_prime, point_v_prime=v_prime,
                    point_noninteractive=ni)
 
     def _original_to_bytes(self) -> bytes:
@@ -108,7 +107,7 @@ class Capsule(object):
             bytes_representation += bytes().join(c.to_bytes() for c in self.activated_components())
         return bytes_representation
 
-    def verify(self, params: UmbralParameters=None) -> bool:
+    def verify(self, params: UmbralParameters = None) -> bool:
         params = params if params is not None else default_params()
 
         e = self._point_e
@@ -127,9 +126,9 @@ class Capsule(object):
     def activated_components(self) -> Union[Tuple[None, None, None], Tuple[Point, Point, Point]]:
         return self._point_e_prime, self._point_v_prime, self._point_noninteractive
 
-    def _reconstruct_shamirs_secret(self, 
+    def _reconstruct_shamirs_secret(self,
                                     priv_b: Union[UmbralPrivateKey, CurveBN],
-                                    params: UmbralParameters=None) -> None:
+                                    params: UmbralParameters = None) -> None:
 
         params = params if params is not None else default_params()
 
@@ -154,10 +153,9 @@ class Capsule(object):
         blake2b.update(dh_xcoord.to_bytes())
         hashed_dh_tuple = blake2b.finalize()
 
-        
         if len(self._attached_cfrags) > 1:
             xs = [CurveBN.hash(cfrag._kfrag_id, hashed_dh_tuple, params=params)
-                    for cfrag in self._attached_cfrags]
+                  for cfrag in self._attached_cfrags]
             x_0 = CurveBN.hash(id_0, hashed_dh_tuple, params=params)
             lambda_0 = lambda_coeff(x_0, xs)
             e = lambda_0 * cfrag_0._point_e1
@@ -216,7 +214,7 @@ def split_rekey(privkey_a_bn: Union[UmbralPrivateKey, CurveBN],
                 signer_a: Signer,
                 pubkey_b_point: Union[UmbralPublicKey, Point],
                 threshold: int, N: int,
-                params: UmbralParameters=None) -> List[KFrag]:
+                params: UmbralParameters = None) -> List[KFrag]:
     """
     Creates a re-encryption key from Alice to Bob and splits it in KFrags,
     using Shamir's Secret Sharing. Requires a threshold number of KFrags 
@@ -232,7 +230,7 @@ def split_rekey(privkey_a_bn: Union[UmbralPrivateKey, CurveBN],
         pubkey_a_point = privkey_a_bn.get_pubkey().point_key
         privkey_a_bn = privkey_a_bn.bn_key
     else:
-        pubkey_a_point = privkey_a_bn * g 
+        pubkey_a_point = privkey_a_bn * g
 
     if isinstance(pubkey_b_point, UmbralPublicKey):
         pubkey_b_point = pubkey_b_point.point_key
@@ -282,16 +280,16 @@ def split_rekey(privkey_a_bn: Union[UmbralPrivateKey, CurveBN],
         z1 = CurveBN.hash(*signature_input, params=params)
         signature = signer_a(z1.to_bytes())
 
-        kfrag = KFrag(id=id, bn_key=rk, 
-                      point_noninteractive=ni, point_commitment=u1, 
+        kfrag = KFrag(id=id, bn_key=rk,
+                      point_noninteractive=ni, point_commitment=u1,
                       point_xcoord=xcoord, signature=signature)
         kfrags.append(kfrag)
 
     return kfrags
 
 
-def reencrypt(kfrag: KFrag, capsule: Capsule, params: UmbralParameters=None, 
-              provide_proof=True, metadata: bytes=None) -> CapsuleFrag:
+def reencrypt(kfrag: KFrag, capsule: Capsule, params: UmbralParameters = None,
+              provide_proof=True, metadata: bytes = None) -> CapsuleFrag:
     if params is None:
         params = default_params()
 
@@ -302,7 +300,7 @@ def reencrypt(kfrag: KFrag, capsule: Capsule, params: UmbralParameters=None,
     e1 = rk * capsule._point_e
     v1 = rk * capsule._point_v
 
-    cfrag = CapsuleFrag(point_e1=e1, point_v1=v1, kfrag_id=kfrag._id, 
+    cfrag = CapsuleFrag(point_e1=e1, point_v1=v1, kfrag_id=kfrag._id,
                         point_noninteractive=kfrag._point_noninteractive,
                         point_xcoord=kfrag._point_xcoord)
 
@@ -313,7 +311,7 @@ def reencrypt(kfrag: KFrag, capsule: Capsule, params: UmbralParameters=None,
 
 
 def _encapsulate(alice_pub_key: Point, key_length=32,
-                 params: UmbralParameters=None) -> Tuple[bytes, Capsule]:
+                 params: UmbralParameters = None) -> Tuple[bytes, Capsule]:
     """Generates a symmetric key and its associated KEM ciphertext"""
     params = params if params is not None else default_params()
 
@@ -337,11 +335,11 @@ def _encapsulate(alice_pub_key: Point, key_length=32,
 
 
 def _decapsulate_original(priv_key: CurveBN, capsule: Capsule, key_length=32,
-                          params: UmbralParameters=None) -> bytes:
+                          params: UmbralParameters = None) -> bytes:
     """Derive the same symmetric key"""
     params = params if params is not None else default_params()
 
-    shared_key = priv_key * (capsule._point_e+capsule._point_v)
+    shared_key = priv_key * (capsule._point_e + capsule._point_v)
     key = kdf(shared_key, key_length)
 
     if not capsule.verify(params):
@@ -353,8 +351,8 @@ def _decapsulate_original(priv_key: CurveBN, capsule: Capsule, key_length=32,
 
 
 def _decapsulate_reencrypted(pub_key: Point, priv_key: CurveBN,
-                            orig_pub_key: Point, capsule: Capsule,
-                            key_length=32, params: UmbralParameters=None) -> bytes:
+                             orig_pub_key: Point, capsule: Capsule,
+                             key_length=32, params: UmbralParameters = None) -> bytes:
     """Derive the same symmetric key"""
     params = params if params is not None else default_params()
 
@@ -374,13 +372,13 @@ def _decapsulate_reencrypted(pub_key: Point, priv_key: CurveBN,
     h = CurveBN.hash(e, v, params=params)
     inv_d = ~d
 
-    if not (s*inv_d) * orig_pub_key == (h*e_prime) + v_prime:
+    if not (s * inv_d) * orig_pub_key == (h * e_prime) + v_prime:
         raise GenericUmbralError()
     return key
 
 
 def encrypt(alice_pubkey: UmbralPublicKey, plaintext: bytes,
-            params: UmbralParameters=None) -> Tuple[bytes, Capsule]:
+            params: UmbralParameters = None) -> Tuple[bytes, Capsule]:
     """
     Performs an encryption using the UmbralDEM object and encapsulates a key
     for the sender using the public key provided.
@@ -400,7 +398,9 @@ def encrypt(alice_pubkey: UmbralPublicKey, plaintext: bytes,
 
 
 def _open_capsule(capsule: Capsule, bob_privkey: UmbralPrivateKey,
-                  alice_pubkey: UmbralPublicKey, params: UmbralParameters=None, 
+                  policy_pubkey: UmbralPublicKey,
+                  alice_pubkey: UmbralPublicKey,
+                  params: UmbralParameters = None,
                   check_proof=True) -> bytes:
     """
     Activates the Capsule from the attached CFrags,
@@ -417,7 +417,8 @@ def _open_capsule(capsule: Capsule, bob_privkey: UmbralPrivateKey,
     if check_proof:
         offending_cfrags = []
         for cfrag in capsule._attached_cfrags:
-            if not cfrag.verify_correctness(capsule, alice_pubkey,
+            if not cfrag.verify_correctness(capsule, policy_pubkey,
+                                            alice_pubkey,
                                             bob_pubkey, params):
                 offending_cfrags.append(cfrag)
 
@@ -427,13 +428,13 @@ def _open_capsule(capsule: Capsule, bob_privkey: UmbralPrivateKey,
 
     capsule._reconstruct_shamirs_secret(priv_b, params=params)
 
-    key = _decapsulate_reencrypted(bob_pubkey.point_key, priv_b, alice_pubkey.point_key, capsule, params=params)
+    key = _decapsulate_reencrypted(bob_pubkey.point_key, priv_b, policy_pubkey.point_key, capsule, params=params)
     return key
 
 
-def decrypt(ciphertext: bytes, capsule: Capsule, 
-            priv_key: UmbralPrivateKey, alice_pub_key: UmbralPublicKey=None, 
-            params: UmbralParameters=None, check_proof=True) -> bytes:
+def decrypt(ciphertext: bytes, capsule: Capsule,
+            priv_key: UmbralPrivateKey, alice_pub_key: UmbralPublicKey = None,
+            params: UmbralParameters = None, check_proof=True) -> bytes:
     """
     Opens the capsule and gets what's inside.
 
@@ -445,10 +446,10 @@ def decrypt(ciphertext: bytes, capsule: Capsule,
     if capsule._attached_cfrags:
         # Since there are cfrags attached, we assume this is Bob opening the Capsule.
         # (i.e., this is a re-encrypted capsule)
-        
+
         bob_priv_key = priv_key
 
-        encapsulated_key = _open_capsule(capsule, bob_priv_key, alice_pub_key, 
+        encapsulated_key = _open_capsule(capsule, bob_priv_key, alice_pub_key,
                                          params=params, check_proof=check_proof)
         dem = UmbralDEM(encapsulated_key)
 

@@ -39,9 +39,8 @@ def test_correctness_proof_serialization():
     assert new_proof._point_v2 == proof._point_v2
     assert new_proof._point_kfrag_commitment == proof._point_kfrag_commitment
     assert new_proof._point_kfrag_pok == proof._point_kfrag_pok
-    assert new_proof._bn_kfrag_sig1 == proof._bn_kfrag_sig1
-    assert new_proof._bn_kfrag_sig2 == proof._bn_kfrag_sig2
-    assert new_proof._bn_sig == proof._bn_sig
+    assert new_proof.bn_sig == proof.bn_sig
+    assert new_proof.kfrag_signature == proof.kfrag_signature
     assert new_proof.metadata == proof.metadata
 
 
@@ -104,7 +103,8 @@ def test_cheating_ursula_replays_old_reencryption(N, M):
     # Alternatively, we can try to open the capsule directly.
     # We should get an exception with an attached list of incorrect cfrags
     with pytest.raises(pre.UmbralCorrectnessError) as exception_info:
-        _ = pre._open_capsule(capsule_alice1, priv_key_bob, pub_key_alice_deleg)
+        _ = pre._open_capsule(capsule_alice1, priv_key_bob, pub_key_alice_sig,
+                              pub_key_alice_deleg)
     correctness_error = exception_info.value
     assert cfrags[0] in correctness_error.offending_cfrags
     assert len(correctness_error.offending_cfrags) == 1
