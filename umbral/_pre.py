@@ -52,6 +52,8 @@ def assess_cfrag_correctness(cfrag,
                              signing_pubkey,
                              encrypting_point,
                              params: UmbralParameters = None):
+    if cfrag.proof is None:
+        raise cfrag.NoProofProvided
     params = params if params is not None else default_params()
 
     ####
@@ -64,17 +66,11 @@ def assess_cfrag_correctness(cfrag,
     v1 = cfrag._point_v1
 
     u = params.u
-    try:
-        u1 = cfrag.proof._point_kfrag_commitment
+    u1 = cfrag.proof._point_kfrag_commitment
 
-        e2 = cfrag.proof._point_e2
-        v2 = cfrag.proof._point_v2
-        u2 = cfrag.proof._point_kfrag_pok
-    except AttributeError:
-        if cfrag.proof is None:
-            raise cfrag.NoProofProvided
-        else:
-            raise
+    e2 = cfrag.proof._point_e2
+    v2 = cfrag.proof._point_v2
+    u2 = cfrag.proof._point_kfrag_pok
 
     hash_input = (e, e1, e2, v, v1, v2, u, u1, u2)
     if cfrag.proof.metadata is not None:
